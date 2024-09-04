@@ -1,11 +1,15 @@
 from aqt import mw
-from aqt.qt import QAction, QInputDialog, QMessageBox
+from aqt.qt import QAction, QInputDialog
 from aqt.utils import showInfo
 from anki.notes import Note
-from anki.decks import DeckManager
-from anki.models import ModelManager
 from bs4 import BeautifulSoup
 import requests
+import os
+import re
+
+def sanitize_filename(filename):
+    """Remove invalid characters from filenames."""
+    return re.sub(r'[^\w\-_\. ]', '_', filename)
 
 def fetch_and_create_deck():
     # Prompt user for the URL
@@ -18,18 +22,42 @@ def fetch_and_create_deck():
     # Fetch the flashcard data from the URL
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
-    flashcard_text = soup.find_all("div", class_="scf-face")
+    flashcard_elements = soup.find_all("div", class_="scf-face")
 
     card_text = []
     card_answer = []
     n = 0
 
-    for flashcard in flashcard_text:
-        temp = flashcard.text
+    for flashcard in flashcard_elements:
+        # Extract the raw HTML content of the flashcard
+        raw_html = flashcard.decode_contents()
+
+        # Process the HTML content
+        temp = BeautifulSoup(raw_html, "html.parser")
+
+        # Handle images
+        for img in temp.find_all("img"):
+            img_url = img["src"]
+            img_name = sanitize_filename(os.path.basename(img_url))
+            img_path = os.path.join(mw.col.media.dir(), img_name)
+
+            try:
+                img_data = requests.get(img_url).content
+                with open(img_path, "wb") as f:
+                    f.write(img_data)
+                img['src'] = img_name  # Update the image tag to refer to the local file
+            except Exception as e:
+                showInfo(f"Failed to download or save image: {e}")
+                img.decompose()  # Remove the img tag if download failed
+
+        # Replace <br> tags with newline characters
+        processed_text = str(temp).replace("<br>", "\n")
+
+        # Add the processed flashcard text to the appropriate list
         if n % 2 == 0:
-            card_text.append(temp)
+            card_text.append(processed_text)
         else:
-            card_answer.append(temp)
+            card_answer.append(processed_text)
         n += 1
 
     # Prompt user for the new deck name
