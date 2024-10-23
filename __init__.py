@@ -19,8 +19,21 @@ def fetch_and_create_deck():
         showInfo("No URL provided. Operation canceled.")
         return
 
+    headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    }
+    
+    
     # Fetch the flashcard data from the URL
-    response = requests.get(url)
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()  # Raise error for bad HTTP responses
+    except requests.RequestException as e:
+        showInfo(f"Failed to fetch the flashcards: {e}")
+        return
     soup = BeautifulSoup(response.content, "html.parser")
     flashcard_elements = soup.find_all("div", class_="scf-face")
 
@@ -31,10 +44,11 @@ def fetch_and_create_deck():
     for flashcard in flashcard_elements:
         # Extract the raw HTML content of the flashcard
         raw_html = flashcard.decode_contents()
-
-        # Process the HTML content
-        temp = BeautifulSoup(raw_html, "html.parser")
-
+        try:
+            temp = BeautifulSoup(flashcard.decode_contents(), "html.parser")
+        except Exception as e:
+            showInfo(f"Error parsing HTML content: {e}")
+            return
         # Handle images
         for img in temp.find_all("img"):
             img_url = img["src"]
@@ -74,7 +88,7 @@ def fetch_and_create_deck():
     # Add cards to the new deck
     model = mw.col.models.byName("Basic")
     if not model:
-        showInfo("Model 'Basic' not found. Operation canceled.")
+        showInfo("Model 'Basic' not found. Operation canceled. Tip: To potentially fix this error, you may try going to 'Tools' (top bar) -> 'Manage Note Types' -> 'Basic' -> 'Add'")
         return
 
     for i in range(len(card_text)):
