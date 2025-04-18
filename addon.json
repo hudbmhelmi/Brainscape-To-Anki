@@ -1,0 +1,7 @@
+{
+    "human_version": "1.2.0",
+    "min_point_version": 50,
+    "max_point_version": 60,
+    "conflicts": [],
+    "requires": ["selenium", "beautifulsoup4"]
+} 
