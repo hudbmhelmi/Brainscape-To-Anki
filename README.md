@@ -1,6 +1,8 @@
 # Brainscape-To-Anki
 Anki Addon that converts Brainscape Flashcards to Anki Flashcards
 
+This is a fork of [Pinkk-Flag's Brainscape-To-Anki](https://github.com/Pinkk-Flag/Brainscape-To-Anki) with enhanced features for handling lazy-loaded content.
+
 # How to install
 
 1. Paste this code into the addon area:
@@ -23,10 +25,11 @@ This addon requires:
   - beautifulsoup4
 
 # Issues
-If there are any issues, don't hesitate to reach out to me to fix the code.
+If there are any issues, please open an issue on the GitHub repository.
 
-Regards,
-DG
+# Credits
+- Original addon by Dario G (Pinkk-Flag)
+- Lazy loading enhancement by Hud
 
 ### Changelog
 
@@ -36,4 +39,4 @@ v1.1.0: Due to a few user requests, additional functionality of images have also
 
 v1.1.1: Major bug fixes. Recently, I suspect that brainscape must've added some protection in order to stop webscraping, so this new patch should solve those problems (for now). Extremely sorry for the delayal, I was not aware of this until recently.
 
-v1.2.0: Added support for lazy-loaded content. Now the addon properly loads all flashcards on the page by scrolling through the content before importing. This ensures all flashcards are captured, not just the initially visible ones. Requires Google Chrome to be installed.
+v1.2.0: Added support for lazy-loaded content. Now the addon properly loads all flashcards on the page by scrolling through the content before importing. This ensures all flashcards are captured, not just the initially visible ones. Requires Google Chrome to be installed. (Contributed by Hud)
