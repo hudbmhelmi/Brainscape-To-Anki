@@ -6,6 +6,11 @@ from bs4 import BeautifulSoup
 import requests
 import os
 import re
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import WebDriverException
 
 def sanitize_filename(filename):
     """Remove invalid characters from filenames."""
@@ -19,23 +24,68 @@ def fetch_and_create_deck():
         showInfo("No URL provided. Operation canceled.")
         return
 
-    headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    }
-    
-    
-    # Fetch the flashcard data from the URL
+    # Use Selenium to handle lazy loading
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()  # Raise error for bad HTTP responses
-    except requests.RequestException as e:
-        showInfo(f"Failed to fetch the flashcards: {e}")
-        return
-    soup = BeautifulSoup(response.content, "html.parser")
+        # Set up headless browser
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+        
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get(url)
+        
+        # Wait for initial page load
+        time.sleep(3)
+        
+        # Scroll down repeatedly to trigger lazy loading
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        while True:
+            # Scroll down to bottom
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            
+            # Wait to load page
+            time.sleep(2)
+            
+            # Calculate new scroll height and compare with last scroll height
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+        
+        # Get the page source after all content is loaded
+        page_source = driver.page_source
+        driver.quit()
+        
+        soup = BeautifulSoup(page_source, "html.parser")
+    except WebDriverException as e:
+        showInfo(f"Failed to initialize Chrome driver. Make sure Chrome is installed: {e}")
+        
+        # Fallback to regular requests as before
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            showInfo(f"Failed to fetch the flashcards: {e}")
+            return
+        
+        soup = BeautifulSoup(response.content, "html.parser")
+    
     flashcard_elements = soup.find_all("div", class_="scf-face")
+    
+    if not flashcard_elements:
+        showInfo("No flashcards found on the page. Try scrolling through the Brainscape page first to load all cards.")
+        return
 
     card_text = []
     card_answer = []
